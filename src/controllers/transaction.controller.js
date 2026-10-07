@@ -143,37 +143,37 @@ if(balance < amount){
  * 
  */
 
-
- const session = await mongoose.startSession()
+let transaction
+ try{
+   const session = await mongoose.startSession()
  session.startTransaction()
 
- const transaction = await transactionModel.create({
+ transaction = new transactionModel({
   fromAccount,
   toAccount,
   amount,
   idempotencyKey,
   status:"PENDING",
- },{session}
-)
+ })
 
-const debitLedgerEntry = await LedgerModel.create({
+const debitLedgerEntry = await LedgerModel.create([{
   account:fromAccount,
   type:"DEBIT",
   amount:amount,
   transaction:transaction._id,  
-} ,{session}) 
+}] ,{session}) 
 
 
 
 
 
-const creditLedgerEntry = await LedgerModel.create({
+const creditLedgerEntry = await LedgerModel.create([{
   account:toAccount,
   type:"CREDIT",
   amount:amount,
   transaction:transaction._id,
  
-},{session})
+}],{session})
 
 
 transaction.status="COMPLETED"
@@ -182,6 +182,15 @@ await transaction.save({session})
 
 await session.commitTransaction()
 session.endSession()
+ }  catch(err){
+  
+  return res.status(400).json({
+    message:"Transaction is pending due to server error , please try after sometimes",
+    err:err.message
+  })
+ }
+
+
 
 
 /**
@@ -245,13 +254,13 @@ async function createInitialFundsTransaction(req,res){
     session.startTransaction()
 
 
-    const transaction = new transactionModel({
+    const transaction = (await transactionModel.create([{
       fromAccount:fromUserAccount._id,
       toAccount,
       amount,
       idempotencyKey,
       status:"PENDING"
-    })
+    }],{session}))[0]
 
 
     const debitLedgerEntry = await ledgerModel.create([{
@@ -261,6 +270,13 @@ async function createInitialFundsTransaction(req,res){
       type:"DEBIT"
     }], {session})
 
+await (()=>{
+  return newPromise((resolve)=>setTimeout(resolve,15*1000));
+})
+
+
+
+
      const creditLedgerEntry = await ledgerModel.create([{
       account:toAccount,
       amount:amount,
@@ -268,8 +284,16 @@ async function createInitialFundsTransaction(req,res){
       type:"CREDIT"
      }],{session})
 
-     transaction.status="COMPLETED"
-     await transaction.save({session})
+   
+
+
+    await transactionModel.findOneAndUpdate(
+      {
+        _id:transaction._id
+      },
+      {status:"COMPLETED"},
+      {session}
+    )
 
      await session.commitTransaction()
      session.endSession()
