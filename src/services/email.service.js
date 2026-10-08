@@ -17,7 +17,7 @@ transporter.verify((error, success) => {
   if (error) {
     console.error('❌ Email server connection error:', error.message);
   } else {
-    console.log('✅ Email server is ready to send messages');
+    console.log(' Email server is ready to send messages');
   }
 });
 
@@ -42,7 +42,7 @@ const sendEmail = async ({ to, subject, text, html }) => {
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Email sent successfully to ${to} (Message ID: ${info.messageId})`);
+    // console.log(` Email sent successfully to ${to} (Message ID: ${info.messageId})`);
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error(`❌ Failed to send email to ${to}:`, error.message);

@@ -44,8 +44,17 @@ async function createTransaction(req,res){
     });
   }
 
+ if (fromAccount.toString() === toAccount.toString()) {
+    return res.status(400).json({
+      success: false,
+      message: "Cannot transfer funds to the same account",
+    });
+  }
+
+
   const fromUserAccount = await accountModel.findOne({
     _id: fromAccount,
+    // user: req.user._id, 
     
   })
 
@@ -287,13 +296,18 @@ await (()=>{
    
 
 
-    await transactionModel.findOneAndUpdate(
-      {
-        _id:transaction._id
-      },
-      {status:"COMPLETED"},
-      {session}
-    )
+    // await transactionModel.findOneAndUpdate(
+    //   {
+    //     _id:transaction._id
+    //   },
+    //   {status:"COMPLETED"},
+    //   {session}
+    // )
+
+transaction.status = "COMPLETED";
+await transaction.save({ session });
+
+
 
      await session.commitTransaction()
      session.endSession()
